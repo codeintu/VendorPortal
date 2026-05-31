@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f5f7fb;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --primary: #b54a4a;
+  --primary-foreground: #ffffff;
+
+  --muted: #e8edf5;
+  --muted-foreground: #64748b;
+
+  --border: #d9e1ee;
+
+  --input-bg: #ffffff;
+  --input-border: #d1d9e6;
+  --ring: #b54a4a;
+
+  --radius: 0.5rem;
+}
+
+[data-theme="dark"] {
+  --background: #0a0f1c;
+  --foreground: #f8fafc;
+
+  --card: #131b2d;
+  --card-foreground: #f8fafc;
+
+  --primary: #b54a4a;
+  --primary-foreground: #ffffff;
+
+  --muted: #1e2738;
+  --muted-foreground: #8b98a5;
+
+  --border: #1e293b;
+
+  --input-bg: #1e2738;
+  --input-border: #2a3441;
+  --ring: #b54a4a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-border: var(--border);
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  @apply antialiased;
+}
+
+body :not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

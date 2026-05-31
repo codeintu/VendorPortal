@@ -1,0 +1,68 @@
+export const DEFAULT_DOCUMENT_TYPES = [
+  "ISF Document",
+  "Packing List",
+  "Bill of Lading",
+  "Freight Invoice",
+  "Certificate of Origin",
+  "Certificate of Fumigation",
+  "Food Grade Certificate",
+  "Certificate of Weight",
+  "Phytosanitary",
+  "COA",
+  "ANNEX",
+  "Allergen Certificate",
+  "Analysis Report",
+  "GMO Certificate",
+  "Irradiation Certificate",
+  "Health Certificate",
+  "Certificate of Sterilization",
+  "Liability Insurance",
+  "Commercial Invoice",
+  "Certificate of Quality",
+  "Pre Shipment Advice",
+  "Shipment Advise",
+  "TT Instructions",
+  "Test Cert.",
+  "SEA Waybill",
+  "Invoice",
+  "Arrival Notice",
+] as const
+
+export type DefaultDocumentType = (typeof DEFAULT_DOCUMENT_TYPES)[number]
+
+export const DOCUMENT_TYPE_LABEL_CHOICES = {
+  "ISF Document": "1D4ADBFEA9",
+  "Packing List": "7EE47C24C9",
+  "Bill of Lading": "63E4C1B47F",
+  "Freight Invoice": "E85DE6B60C",
+  "Certificate of Origin": "7AE0AFCA88",
+  "Certificate of Fumigation": "AAEB0F9ADC",
+  "Food Grade Certificate": "B2D543E110",
+  "Certificate of Weight": "189C449A16",
+  "Phytosanitary": "29EE80D541",
+  "COA": "C874467ED1",
+  "ANNEX": "D43C0BFE1A",
+  "Allergen Certificate": "D8197E15EB",
+  "Analysis Report": "7749937241",
+  "GMO Certificate": "E72B027741",
+  "Irradiation Certificate": "70B8E40F5C",
+  "Health Certificate": "21A97EC382",
+  "Certificate of Sterilization": "27166BC0EA",
+  "Liability Insurance": "9F4A22B49B",
+  "Commercial Invoice": "CF5A39A787",
+  "Certificate of Quality": "7B219F0CB6",
+  "Pre Shipment Advice": "BF1756A2FA",
+  "Shipment Advise": "077A31A0A1",
+  "TT Instructions": "700977ECA7",
+  "Test Cert.": "65A5A98EFB",
+  "SEA Waybill": "76640F0867",
+  "Invoice": "0353EBBB42",
+  "Arrival Notice": "39787E1472",
+} as const satisfies Record<DefaultDocumentType, string>
+
+export const DOCUMENT_TYPE_BY_LABEL_CHOICE_ID = Object.fromEntries(
+  Object.entries(DOCUMENT_TYPE_LABEL_CHOICES).map(([documentType, choiceId]) => [
+    choiceId,
+    documentType,
+  ])
+) as Record<string, DefaultDocumentType>

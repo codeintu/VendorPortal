@@ -1,0 +1,216 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-05-25T11:16:00.250Z",
+  "framework": "react",
+  "router": "react-router",
+  "basePath": "/",
+  "routes": {
+    "/": {
+      "path": "/",
+      "title": "Home",
+      "elements": [],
+      "linksTo": [],
+      "isDynamic": false
+    },
+    "/dashboard": {
+      "path": "/dashboard",
+      "title": "Dashboard",
+      "elements": [
+        {
+          "id": "table_po_number_date_entered_est_shi",
+          "role": "table",
+          "label": "PO NUMBER DATE ENTERED EST. SHIP DATE DATE RECEIVED PAYMENT DATE TOTAL AMOUNT STATUS -$` return ( ) })}",
+          "interactionType": "click"
+        }
+      ],
+      "linksTo": [],
+      "isDynamic": false
+    },
+    "/dashboard/orders": {
+      "path": "/dashboard/orders",
+      "title": "Orders",
+      "elements": [
+        {
+          "id": "input_search_by_po_number",
+          "role": "input",
+          "label": "Search by PO number...",
+          "interactionType": "input"
+        },
+        {
+          "id": "btn_unknown_1",
+          "role": "button",
+          "label": "",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_export_csv",
+          "role": "button",
+          "label": "Export CSV",
+          "interactionType": "click"
+        },
+        {
+          "id": "table_po_number_date_entered_est_shi",
+          "role": "table",
+          "label": "PO NUMBER DATE ENTERED EST. SHIP DATE DATE RECEIVED PAYMENT DATE TOTAL AMOUNT STATUS Try Again ) : orders.length === 0 ? ( No purchase orders found. ) : ( orders.map((order, index) => -$` return ( ) }) )}",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_try_again",
+          "role": "button",
+          "label": "Try Again",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_previous_page_group",
+          "role": "button",
+          "label": "Previous page group",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_page_pagenumber",
+          "role": "button",
+          "label": "`Page ${pageNumber",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_next_page_group",
+          "role": "button",
+          "label": "Next page group",
+          "interactionType": "click"
+        }
+      ],
+      "linksTo": [],
+      "isDynamic": false
+    },
+    "/dashboard/orders/:poNumber": {
+      "path": "/dashboard/orders/:poNumber",
+      "title": "PoNumber detail",
+      "elements": [
+        {
+          "id": "el_back_to_orders",
+          "role": "unknown",
+          "label": "Back to orders",
+          "interactionType": "click",
+          "navigatesTo": "/dashboard/orders"
+        },
+        {
+          "id": "el_back_to_orders_1",
+          "role": "unknown",
+          "label": "Back to orders",
+          "interactionType": "click",
+          "navigatesTo": "/dashboard/orders"
+        },
+        {
+          "id": "table_item_no_product_name_unit_type",
+          "role": "table",
+          "label": "ITEM NO PRODUCT NAME UNIT TYPE ACTUAL PURCH QTY QTY RECEIVED INVOICED AMOUNT SERIAL NO )) )}",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_upload_new_file_upload_file",
+          "role": "button",
+          "label": "Upload New File | Upload File",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_no_file_uploaded_approved",
+          "role": "button",
+          "label": "No file uploaded | Approved",
+          "interactionType": "click"
+        },
+        {
+          "id": "input_type_name",
+          "role": "input",
+          "label": "Type name",
+          "interactionType": "input"
+        },
+        {
+          "id": "btn_add",
+          "role": "button",
+          "label": "Add",
+          "interactionType": "click"
+        },
+        {
+          "id": "input_unknown_1",
+          "role": "input",
+          "label": "",
+          "interactionType": "input"
+        }
+      ],
+      "linksTo": [
+        "/dashboard/orders"
+      ],
+      "isDynamic": true
+    },
+    "/login": {
+      "path": "/login",
+      "title": "Login",
+      "elements": [
+        {
+          "id": "email",
+          "role": "input",
+          "label": "name@example.com",
+          "interactionType": "input"
+        },
+        {
+          "id": "link_forgot_password",
+          "role": "link",
+          "label": "Forgot password?",
+          "interactionType": "click"
+        },
+        {
+          "id": "password",
+          "role": "input",
+          "label": "••••••••",
+          "interactionType": "input"
+        },
+        {
+          "id": "btn_signing_in_sign_in",
+          "role": "button",
+          "label": "Signing in... | Sign in",
+          "interactionType": "click"
+        },
+        {
+          "id": "link_contact_your_administrator",
+          "role": "link",
+          "label": "Contact your administrator",
+          "interactionType": "click"
+        },
+        {
+          "id": "btn_unknown_1",
+          "role": "button",
+          "label": "",
+          "interactionType": "click"
+        },
+        {
+          "id": "input_unknown_1",
+          "role": "input",
+          "label": "",
+          "interactionType": "input"
+        }
+      ],
+      "linksTo": [],
+      "isDynamic": false
+    }
+  },
+  "navigation": {
+    "primary": {
+      "id": "primary-nav",
+      "type": "topbar",
+      "persistent": false,
+      "items": [
+        {
+          "elementId": "link_back_to_orders",
+          "label": "Back to orders",
+          "targetRoute": "/dashboard/orders"
+        },
+        {
+          "elementId": "link_back_to_orders_1",
+          "label": "Back to orders",
+          "targetRoute": "/dashboard/orders"
+        }
+      ]
+    }
+  },
+  "globalElements": []
+}
