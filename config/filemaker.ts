@@ -7,7 +7,7 @@
 
 export const FILEMAKER_LAYOUTS = {
   vendors: "Web_Contacts",
-  purchaseOrders: "Web_POD",
+  purchaseOrders: "Web_PO",
   lineItems: "Web_MLI",
   documents: "",
 };

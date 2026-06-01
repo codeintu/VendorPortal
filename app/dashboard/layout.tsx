@@ -2,7 +2,6 @@
 
 import { useRouter, usePathname } from "next/navigation"
 import {
-  CreditCard,
   LayoutDashboard,
   LogOut,
   ShoppingBag,
@@ -53,7 +52,6 @@ export default function DashboardLayout({
             {[
               { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
               { href: "/dashboard/orders", label: "Orders", icon: ShoppingBag },
-              { href: "#", label: "Payments", icon: CreditCard },
               { href: "/dashboard/profile", label: "Profile", icon: UserCircle2 },
             ].map((item) => (
               <Link
