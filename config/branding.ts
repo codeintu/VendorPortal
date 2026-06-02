@@ -1,3 +1,5 @@
+//Default logo
+
 const defaultPortalLogoUrl =
   "https://www.kibizsystems.com/wp-content/uploads/UsSpiceLogo.png"
 
