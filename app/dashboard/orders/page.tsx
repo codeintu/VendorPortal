@@ -198,7 +198,7 @@ export default function OrdersPage() {
                       }}
                     >
                       <td className="px-5 py-5 text-[15px] font-bold text-primary md:px-7">
-                        {order.poNumber || EMPTY_VALUE}
+                        {order.poNumberDisplay || EMPTY_VALUE}
                       </td>
                       <td className="whitespace-nowrap px-5 py-5 text-[14px] text-foreground">
                         {order.dateEntered || EMPTY_VALUE}

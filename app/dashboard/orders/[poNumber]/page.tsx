@@ -13,6 +13,7 @@ import { OrderAcknowledgeControl } from "@/components/order-acknowledge-control"
 type OrderDetails = {
   header: {
     poNumber: string
+    poNumberDisplay: string
     orderPlacedBy: string
     dateEntered: string
     deliveredVia: string
@@ -272,7 +273,7 @@ export default function OrderDetailsPage() {
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
           <div className="flex flex-wrap items-center gap-4">
             <h1 className="text-[34px] font-bold tracking-tight text-foreground md:text-[42px]">
-              Order #{order.header.poNumber}
+              Order #{order.header.poNumberDisplay}
             </h1>
             <span
               className={`inline-flex items-center rounded-full border px-4 py-1 text-[13px] font-semibold ${getStatusClassName(

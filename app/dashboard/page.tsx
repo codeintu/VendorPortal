@@ -259,7 +259,7 @@ export default function DashboardPage() {
                           }}
                         >
                           <td className="px-5 py-5 text-[16px] font-bold text-primary md:px-7">
-                            {order.poNumber || EMPTY_VALUE}
+                            {order.poNumberDisplay || EMPTY_VALUE}
                           </td>
                           <td className="px-5 py-5 text-[15px] text-foreground">
                             {order.dateEntered || EMPTY_VALUE}

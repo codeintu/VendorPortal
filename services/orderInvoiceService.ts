@@ -78,11 +78,13 @@ export const sendOrderInvoice = async (
     throw new Error("No invoice recipient is configured.")
   }
 
-  const subject = `Invoice ${invoice} — PO ${poNumber} — ${vendorCompany}`
+  // Vendor-facing PO number for the email text (the record is still fetched/updated by internal poNumber).
+  const poNumberDisplay = order.poNumberDisplay
+  const subject = `Invoice ${invoice} — PO ${poNumberDisplay} — ${vendorCompany}`
   const text = [
     "Dear US Spice Mills Team,",
     "",
-    `Please find attached invoice ${invoice} for purchase order ${poNumber}.`,
+    `Please find attached invoice ${invoice} for purchase order ${poNumberDisplay}.`,
     "",
     "Please let us know if anything further is required.",
     "",
@@ -91,7 +93,7 @@ export const sendOrderInvoice = async (
   ].join("\n")
   const html = [
     "<p>Dear US Spice Mills Team,</p>",
-    `<p>Please find attached invoice <strong>${escapeHtml(invoice)}</strong> for purchase order <strong>${escapeHtml(poNumber)}</strong>.</p>`,
+    `<p>Please find attached invoice <strong>${escapeHtml(invoice)}</strong> for purchase order <strong>${escapeHtml(poNumberDisplay)}</strong>.</p>`,
     "<p>Please let us know if anything further is required.</p>",
     `<p>Best regards,<br/>${escapeHtml(vendorCompany)}</p>`,
   ].join("")

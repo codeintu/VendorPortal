@@ -149,7 +149,8 @@ export const uploadOrderDocument = async (
     throw new Error(`Unable to resolve PO VR folder for year ${year}`)
   }
 
-  const poFolderId = await resolveDriveFolderChain(poVrFolderId, [`PO ${input.poNumber}`])
+  // Drive folders are keyed by the display PO number (PoNumber_new), shared across versions.
+  const poFolderId = await resolveDriveFolderChain(poVrFolderId, [`PO ${order.header.poNumberDisplay}`])
 
   if (!poFolderId) {
     throw new Error(`Unable to resolve PO folder for order ${input.poNumber}`)

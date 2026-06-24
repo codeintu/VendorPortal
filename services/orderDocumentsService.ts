@@ -142,7 +142,8 @@ export const getOrderDocumentsForVendor = async (vendorId: string, poNumber: str
   }
 
   const poVrFolderName = `PO VR ${year}`
-  const poFolderName = `PO ${poNumber}`
+  // Drive folders are keyed by the display PO number (PoNumber_new), shared across versions.
+  const poFolderName = `PO ${order.header.poNumberDisplay}`
 
   let poVrFolderId: string | null = null
   let poFolderId: string | null = null

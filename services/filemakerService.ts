@@ -10,6 +10,7 @@ let cachedToken: string | null = null;
 
 type PurchaseOrderRecord = {
   poNumber: string;
+  poNumberDisplay: string;
   orderPlacedBy: string;
   dateEntered: string;
   deliveredVia: string;
@@ -325,6 +326,8 @@ const fetchFM = async (
 
 const mapPurchaseOrderRecord = (fieldData: Record<string, unknown>): PurchaseOrderRecord => ({
   poNumber: normalizeFieldValue(fieldData.PONumber),
+  // Display-only versioned PO number (PONumber_new). The internal key stays `poNumber`.
+  poNumberDisplay: normalizeFieldValue(fieldData.PONumber_new),
   orderPlacedBy: pickFieldValue(fieldData, ['StaffName_Buyer']),
   dateEntered: normalizeFieldValue(fieldData.DateEntered),
   deliveredVia: pickFieldValue(fieldData, ['ShipVia']),
@@ -439,6 +442,8 @@ export const getVendorPOs = async (
   const offset = (safePage - 1) * safePageSize + 1;
   const query: Record<string, string> = {
     VendorID: `=="${vendorId}"`,
+    // Only the latest version of each PO is listed/searched.
+    LatestPOVersion: `==1`,
   };
 
   if (options.status && options.status !== "All") {
@@ -447,7 +452,8 @@ export const getVendorPOs = async (
 
   const searchTerm = normalizeFieldValue(options.poNumber);
   if (searchTerm) {
-    query.PONumber = `*${searchTerm}*`;
+    // Vendors search by the display number (PONumber_new), not the internal PONumber.
+    query.PONumber_new = `*${searchTerm}*`;
   }
 
   const payload = {

@@ -28,6 +28,7 @@ export type VendorSummary = {
 
 export type PurchaseOrder = {
   poNumber: string
+  poNumberDisplay: string
   dateEntered: string
   dateScheduled: string
   dateReceived: string
