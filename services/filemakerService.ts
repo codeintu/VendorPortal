@@ -46,6 +46,8 @@ type PurchaseOrderRecord = {
 type OrderLineItemRecord = {
   itemNo: string;
   productName: string;
+  vendorItemNo: string;
+  vendorDescription: string;
   unitType: string;
   actualPurchQty: string;
   qtyReceived: string;
@@ -359,6 +361,8 @@ const mapPurchaseOrderRecord = (fieldData: Record<string, unknown>): PurchaseOrd
 const mapLineItemRecord = (fieldData: Record<string, unknown>): OrderLineItemRecord => ({
   itemNo: pickFieldValue(fieldData, ['ItemNo']),
   productName: pickFieldValue(fieldData, ['ProductName']),
+  vendorItemNo: pickFieldValue(fieldData, ['VendorItemNo']),
+  vendorDescription: pickFieldValue(fieldData, ['VendorDescription']),
   unitType: pickFieldValue(fieldData, ['UnitType']),
   actualPurchQty: pickFieldValue(fieldData, ['ActualPurch_Qty']),
   qtyReceived: pickFieldValue(fieldData, ['Mli_POM__LineIdSerial_LineNo::Qty_Received']),
@@ -800,7 +804,7 @@ export const acknowledgeOrder = async (
     VendorAcknowledged: '1',
     VendorAcknowledgedBy: authorName,
     VendorAcknowledgedOn: timestamp,
-    EstArrivalDate: estArrivalDate,
+    DateScheduledArrival: estArrivalDate,
   });
 
   const refreshed = await getVendorPOByNumber(vendorId, poNumber);
@@ -822,7 +826,7 @@ export const updateEstArrivalDate = async (
     throw new Error('Estimated delivery date is required.');
   }
 
-  return updatePurchaseOrder(vendorId, poNumber, { EstArrivalDate: estArrivalDate }, assertAcknowledged);
+  return updatePurchaseOrder(vendorId, poNumber, { DateScheduledArrival: estArrivalDate }, assertAcknowledged);
 };
 
 /** Update the order shipped date and tracking number (requires acknowledgement). */

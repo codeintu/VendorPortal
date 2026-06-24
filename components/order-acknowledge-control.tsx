@@ -82,7 +82,7 @@ export function OrderAcknowledgeControl({
         className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(181,74,74,0.18)] transition-colors hover:bg-[#d36a6a] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        Order Acknowledgement
+        Acknowledge Order
       </button>
 
       {dialogOpen ? (
@@ -90,12 +90,12 @@ export function OrderAcknowledgeControl({
           <div className="w-full max-w-md rounded-[18px] border border-border/70 bg-card p-6 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
             <h4 className="text-[18px] font-semibold tracking-tight text-foreground">Acknowledge Order</h4>
             <p className="mt-1.5 text-[13px] text-muted-foreground">
-              Enter the estimated arrival date to acknowledge this order.
+              Enter the estimated ship date to acknowledge this order.
             </p>
 
             <div className="mt-4">
               <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Estimated Arrival Date
+                Est. Ship Date
               </label>
               <input
                 type="date"

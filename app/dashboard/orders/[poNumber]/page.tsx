@@ -48,6 +48,8 @@ type OrderDetails = {
   lineItems: Array<{
     itemNo: string
     productName: string
+    vendorItemNo: string
+    vendorDescription: string
     unitType: string
     actualPurchQty: string
     qtyReceived: string
@@ -310,9 +312,9 @@ export default function OrderDetailsPage() {
           title="Order Details"
           icon={Package}
           fields={[
-            { label: "Placed By", value: order.header.orderPlacedBy },
+            { label: "Order Placed By", value: order.header.orderPlacedBy },
             { label: "Freight Type", value: order.header.freightType },
-            { label: "FOB Point", value: order.header.freightOnBoard },
+            { label: "Freight On Board", value: order.header.freightOnBoard },
             { label: "Category", value: order.header.category },
           ]}
         />
@@ -322,8 +324,8 @@ export default function OrderDetailsPage() {
           icon={Truck}
           fields={[
             { label: "Est. Ship Date", value: order.header.dateScheduled },
-            { label: "Method", value: order.header.deliveredVia },
-            { label: "Contract Ref.", value: order.header.vendorContractNumber },
+            { label: "Delivered Via", value: order.header.deliveredVia },
+            { label: "Vendor Contract #", value: order.header.vendorContractNumber },
             { label: "Payment Date", value: order.header.paymentDate },
           ]}
         />
@@ -361,7 +363,8 @@ export default function OrderDetailsPage() {
           vendorAcknowledgedOn: order.header.vendorAcknowledgedOn,
           readyOn: order.header.readyOn,
           orderShippedDate: order.header.orderShippedDate,
-          estArrivalDate: order.header.estArrivalDate,
+          estArrivalDate: order.header.dateScheduled,
+          receivedDate: order.header.dateReceived,
           trackingNo: order.header.trackingNo,
           vendorInvoiceNo: order.header.vendorInvoiceNo,
         }}
@@ -381,8 +384,14 @@ export default function OrderDetailsPage() {
           <table className="w-full min-w-[980px] text-left">
             <thead className="border-y border-border/70 bg-muted text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-4 md:px-7">ITEM NO</th>
-                <th className="px-5 py-4">PRODUCT NAME</th>
+                <th className="px-5 py-4 md:px-7">
+                  <span className="block">ITEM NO</span>
+                  <span className="block">USSM ITEM NO</span>
+                </th>
+                <th className="px-5 py-4">
+                  <span className="block">ITEM DESC.</span>
+                  <span className="block">USSM ITEM DESC.</span>
+                </th>
                 <th className="px-5 py-4">UNIT TYPE</th>
                 <th className="px-5 py-4">ACTUAL PURCH QTY</th>
                 <th className="px-5 py-4">QTY RECEIVED</th>
@@ -400,11 +409,21 @@ export default function OrderDetailsPage() {
               ) : (
                 order.lineItems.map((item, index) => (
                   <tr key={getLineItemKey(item, index)} className="transition-colors hover:bg-muted/70">
-                    <td className="px-5 py-5 text-sm font-bold text-primary md:px-7">
-                      {item.itemNo || EMPTY_VALUE}
+                    <td className="px-5 py-5 md:px-7">
+                      <span className="block text-sm font-bold text-primary">
+                        {item.vendorItemNo || EMPTY_VALUE}
+                      </span>
+                      <span className="mt-1 block text-xs font-semibold text-muted-foreground">
+                        {item.itemNo || EMPTY_VALUE}
+                      </span>
                     </td>
-                    <td className="px-5 py-5 text-sm font-semibold text-foreground">
-                      {item.productName || EMPTY_VALUE}
+                    <td className="px-5 py-5">
+                      <span className="block text-sm font-semibold text-foreground">
+                        {item.vendorDescription || EMPTY_VALUE}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {item.productName || EMPTY_VALUE}
+                      </span>
                     </td>
                     <td className="px-5 py-5 text-sm text-muted-foreground">
                       {item.unitType || EMPTY_VALUE}

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Loader2,
   Package,
+  PackageCheck,
   ShoppingCart,
   Truck,
 } from "lucide-react"
@@ -18,6 +19,7 @@ export type OrderStatusFields = {
   readyOn: string
   orderShippedDate: string
   estArrivalDate: string
+  receivedDate: string
   trackingNo: string
   vendorInvoiceNo: string
 }
@@ -73,7 +75,11 @@ function toStatusFields(order: Record<string, unknown>): OrderStatusFields {
     vendorAcknowledgedOn: read("vendorAcknowledgedOn"),
     readyOn: read("readyOn"),
     orderShippedDate: read("orderShippedDate"),
-    estArrivalDate: read("estArrivalDate"),
+    // The estimated ship date is backed by the FileMaker DateScheduledArrival
+    // field, which maps to `dateScheduled` on the PO record. `receivedDate` is
+    // the auto-updated DateReceived field, mapped to `dateReceived`.
+    estArrivalDate: read("dateScheduled") || read("estArrivalDate"),
+    receivedDate: read("dateReceived") || read("receivedDate"),
     trackingNo: read("trackingNo"),
     vendorInvoiceNo: read("vendorInvoiceNo"),
   }
@@ -123,20 +129,24 @@ function TimelineRow({
           >
             {label}
           </p>
-          {subtext ? (
-            <p className="text-[12px] text-muted-foreground">{subtext}</p>
-          ) : null}
         </div>
       </div>
-      <p
-        className={
-          done
-            ? "whitespace-nowrap text-right text-[13px] font-semibold text-emerald-600 dark:text-emerald-400"
-            : "whitespace-nowrap text-right text-[13px] italic text-muted-foreground"
-        }
-      >
-        {value || EMPTY_VALUE}
-      </p>
+      <div className="text-right">
+        <p
+          className={
+            done
+              ? "whitespace-nowrap text-[13px] font-semibold text-emerald-600 dark:text-emerald-400"
+              : "whitespace-nowrap text-[13px] italic text-muted-foreground"
+          }
+        >
+          {value || EMPTY_VALUE}
+        </p>
+        {subtext ? (
+          <p className="whitespace-nowrap text-[12px] text-emerald-600 dark:text-emerald-400">
+            {subtext}
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -320,11 +330,17 @@ export function OrderStatusActions({
       return
     }
 
-    await runAction(
+    const { ok } = await runAction(
       "update-est-delivery",
       { action: "update-est-delivery", estArrivalDate: estDeliveryDate },
       { fields: ["estDelivery"] }
     )
+
+    // Reload the parent order so the "Est. Ship Date" shown in the
+    // Shipping & Delivery card stays in sync with the status timeline.
+    if (ok) {
+      onAcknowledged?.()
+    }
   }
 
   const handleUpdateShipped = async () => {
@@ -386,6 +402,12 @@ export function OrderStatusActions({
             done={Boolean(status.readyOn)}
           />
           <TimelineRow
+            icon={CalendarCheck}
+            label="Estimated Ship Date"
+            value={status.estArrivalDate}
+            done={Boolean(status.estArrivalDate)}
+          />
+          <TimelineRow
             icon={Truck}
             label="Order Shipped"
             value={status.orderShippedDate}
@@ -393,10 +415,10 @@ export function OrderStatusActions({
             done={Boolean(status.orderShippedDate)}
           />
           <TimelineRow
-            icon={CalendarCheck}
-            label="Estimated Delivery"
-            value={status.estArrivalDate}
-            done={Boolean(status.estArrivalDate)}
+            icon={PackageCheck}
+            label="Received Date"
+            value={status.receivedDate}
+            done={Boolean(status.receivedDate)}
           />
         </div>
       </div>
@@ -419,7 +441,7 @@ export function OrderStatusActions({
             className={`${primaryButtonClass} w-full`}
           >
             {pending === "acknowledge" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Order Acknowledgement
+            Acknowledge Order
           </button>
         )}
 
@@ -465,37 +487,6 @@ export function OrderStatusActions({
           ) : null}
         </div>
 
-        {/* Estimated Delivery Date — only visible once acknowledged */}
-        {acknowledged ? (
-          <div>
-            <FieldLabel>Estimated Delivery Date</FieldLabel>
-            <div className="flex items-center gap-3">
-              <input
-                type="date"
-                value={estDeliveryDate}
-                onChange={(event) => {
-                  setEstDeliveryDate(event.target.value)
-                  clearInvalid("estDelivery")
-                }}
-                onAnimationEnd={() => stopShake("estDelivery")}
-                disabled={isLocked || pending === "update-est-delivery"}
-                className={fieldClass("estDelivery", { date: true, value: estDeliveryDate })}
-              />
-              <button
-                type="button"
-                onClick={() => void handleUpdateEstDelivery()}
-                disabled={isLocked || pending === "update-est-delivery"}
-                className={actionButtonClass}
-              >
-                {pending === "update-est-delivery" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : null}
-                Update
-              </button>
-            </div>
-          </div>
-        ) : null}
-
         {/* Packed & Ready */}
         <div>
           <FieldLabel>Packed &amp; Ready Date</FieldLabel>
@@ -522,6 +513,37 @@ export function OrderStatusActions({
             </button>
           </div>
         </div>
+
+        {/* Estimated Delivery Date — only visible once acknowledged */}
+        {acknowledged ? (
+          <div>
+            <FieldLabel>Est. Ship Date</FieldLabel>
+            <div className="flex items-center gap-3">
+              <input
+                type="date"
+                value={estDeliveryDate}
+                onChange={(event) => {
+                  setEstDeliveryDate(event.target.value)
+                  clearInvalid("estDelivery")
+                }}
+                onAnimationEnd={() => stopShake("estDelivery")}
+                disabled={isLocked || pending === "update-est-delivery"}
+                className={fieldClass("estDelivery", { date: true, value: estDeliveryDate })}
+              />
+              <button
+                type="button"
+                onClick={() => void handleUpdateEstDelivery()}
+                disabled={isLocked || pending === "update-est-delivery"}
+                className={actionButtonClass}
+              >
+                {pending === "update-est-delivery" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Update
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Order Shipped Date + Tracking */}
         <div>
@@ -576,11 +598,11 @@ export function OrderStatusActions({
               Acknowledge Order
             </h4>
             <p className="mt-1.5 text-[13px] text-muted-foreground">
-              Enter the estimated arrival date to acknowledge this order.
+              Enter the estimated ship date to acknowledge this order.
             </p>
 
             <div className="mt-4">
-              <FieldLabel>Estimated Arrival Date</FieldLabel>
+              <FieldLabel>Est. Ship Date</FieldLabel>
               <input
                 type="date"
                 value={ackDate}
