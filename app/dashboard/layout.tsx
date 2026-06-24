@@ -125,7 +125,7 @@ export default function DashboardLayout({
           </header>
 
         <main className="flex-1 overflow-x-hidden bg-background px-5 py-7 md:px-7 md:py-8">
-          <div className="mx-auto max-w-[1180px] space-y-7 md:space-y-7">{children}</div>
+          <div className="mx-auto max-w-[1300px] space-y-7 md:space-y-7">{children}</div>
         </main>
       </div>
       </div>

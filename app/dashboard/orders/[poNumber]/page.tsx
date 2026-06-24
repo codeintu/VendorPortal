@@ -1,11 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { ArrowLeft, Loader2, LucideIcon, Package, Truck, Building2 } from "lucide-react"
 import { useDashboardData } from "../../dashboard-data-context"
-import { OrderDocumentsPanel } from "@/components/order-documents-panel"
+import { OrderDocumentsTabs } from "@/components/order-documents-tabs"
+import { OrderNotesComments } from "@/components/order-notes-comments"
+import { OrderStatusActions } from "@/components/order-status-actions"
+import { OrderAcknowledgeControl } from "@/components/order-acknowledge-control"
 
 type OrderDetails = {
   header: {
@@ -30,6 +33,17 @@ type OrderDetails = {
     paymentDate: string
     totalAmount: string
     status: string
+    notes: string
+    vendorComments: string
+    trackingNo: string
+    vendorInvoiceNo: string
+    orderShippedDate: string
+    estArrivalDate: string
+    vendorAcknowledged: string
+    vendorAcknowledgedBy: string
+    vendorAcknowledgedOn: string
+    orderPlacedOn: string
+    readyOn: string
   }
   lineItems: Array<{
     itemNo: string
@@ -180,6 +194,27 @@ export default function OrderDetailsPage() {
     }
   }, [vendorId, poNumber])
 
+  // Silent re-fetch used to keep the header + Vendor Actions panel in sync after
+  // an acknowledgement from either place.
+  const reloadOrder = useCallback(async () => {
+    if (!vendorId || !poNumber) {
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `/api/orders/details?vendorId=${encodeURIComponent(vendorId)}&poNumber=${encodeURIComponent(poNumber)}`
+      )
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setOrder(data.order as OrderDetails)
+      }
+    } catch (reloadError) {
+      console.error(reloadError)
+    }
+  }, [vendorId, poNumber])
+
   const getStatusClassName = (status?: string | null) => {
     switch ((status || "").trim().toLowerCase()) {
       case "open":
@@ -223,15 +258,16 @@ export default function OrderDetailsPage() {
 
   return (
     <div className="space-y-8">
-      <section className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <Link
-            href="/dashboard/orders"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to orders
-          </Link>
+      <section className="space-y-3">
+        <Link
+          href="/dashboard/orders"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to orders
+        </Link>
+
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
           <div className="flex flex-wrap items-center gap-4">
             <h1 className="text-[34px] font-bold tracking-tight text-foreground md:text-[42px]">
               Order #{order.header.poNumber}
@@ -244,15 +280,28 @@ export default function OrderDetailsPage() {
               {order.header.status || EMPTY_VALUE}
             </span>
           </div>
-        </div>
 
-        <div className="text-right">
-          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
-            Order Amount
-          </p>
-          <p className="mt-1 text-[32px] font-bold tracking-tight text-foreground md:text-[38px]">
-            {order.header.totalAmount ? formatCurrency(order.header.totalAmount) : EMPTY_VALUE}
-          </p>
+          <div className="flex items-center gap-6">
+            <OrderAcknowledgeControl
+              vendorId={vendorId}
+              poNumber={poNumber}
+              status={order.header.status}
+              acknowledged={["1", "yes", "true"].includes(
+                order.header.vendorAcknowledged.trim().toLowerCase()
+              )}
+              acknowledgedOn={order.header.vendorAcknowledgedOn}
+              onAcknowledged={reloadOrder}
+            />
+
+            <div className="text-right leading-none">
+              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
+                Order Amount
+              </p>
+              <p className="text-[28px] font-bold leading-none tracking-tight text-foreground md:text-[34px]">
+                {order.header.totalAmount ? formatCurrency(order.header.totalAmount) : EMPTY_VALUE}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -290,6 +339,33 @@ export default function OrderDetailsPage() {
           ]}
         />
       </section>
+
+      <OrderNotesComments
+        notes={order.header.notes}
+        initialComments={order.header.vendorComments}
+        vendorId={vendorId}
+        poNumber={poNumber}
+        disabled={["closed", "voided"].includes(order.header.status.trim().toLowerCase())}
+      />
+
+      <OrderStatusActions
+        key={`ack-${order.header.vendorAcknowledged}`}
+        vendorId={vendorId}
+        poNumber={poNumber}
+        orderStatus={order.header.status}
+        onAcknowledged={reloadOrder}
+        initialStatus={{
+          orderPlacedOn: order.header.orderPlacedOn,
+          vendorAcknowledged: order.header.vendorAcknowledged,
+          vendorAcknowledgedBy: order.header.vendorAcknowledgedBy,
+          vendorAcknowledgedOn: order.header.vendorAcknowledgedOn,
+          readyOn: order.header.readyOn,
+          orderShippedDate: order.header.orderShippedDate,
+          estArrivalDate: order.header.estArrivalDate,
+          trackingNo: order.header.trackingNo,
+          vendorInvoiceNo: order.header.vendorInvoiceNo,
+        }}
+      />
 
       <section className="overflow-hidden rounded-[24px] border border-border/70 bg-card shadow-[0_18px_36px_rgba(0,0,0,0.22)]">
         <div className="border-b border-border/70 px-6 py-5">
@@ -353,7 +429,15 @@ export default function OrderDetailsPage() {
         </div>
       </section>
 
-      <OrderDocumentsPanel vendorId={vendorId} poNumber={poNumber} />
+      <OrderDocumentsTabs
+        vendorId={vendorId}
+        poNumber={poNumber}
+        disabled={["closed", "voided"].includes(order.header.status.trim().toLowerCase())}
+        lineItems={order.lineItems.map((item) => ({
+          itemNo: item.itemNo,
+          productName: item.productName,
+        }))}
+      />
     </div>
   )
 }

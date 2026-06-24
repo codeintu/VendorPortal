@@ -30,6 +30,17 @@ type PurchaseOrderRecord = {
   paymentDate: string;
   totalAmount: string;
   status: string;
+  notes: string;
+  vendorComments: string;
+  trackingNo: string;
+  vendorInvoiceNo: string;
+  orderShippedDate: string;
+  estArrivalDate: string;
+  vendorAcknowledged: string;
+  vendorAcknowledgedBy: string;
+  vendorAcknowledgedOn: string;
+  orderPlacedOn: string;
+  readyOn: string;
 };
 
 type OrderLineItemRecord = {
@@ -332,6 +343,17 @@ const mapPurchaseOrderRecord = (fieldData: Record<string, unknown>): PurchaseOrd
   paymentDate: normalizeFieldValue(fieldData.PaymentDate),
   totalAmount: normalizeFieldValue(fieldData.Total_cn),
   status: normalizeFieldValue(fieldData.Status),
+  notes: pickFieldValue(fieldData, ['Message']),
+  vendorComments: pickFieldValue(fieldData, ['VendorNotes']),
+  trackingNo: pickFieldValue(fieldData, ['TrackingNo']),
+  vendorInvoiceNo: pickFieldValue(fieldData, ['VendorInvoiceNo']),
+  orderShippedDate: normalizeFieldValue(fieldData.OrderShippedDate),
+  estArrivalDate: normalizeFieldValue(fieldData.EstArrivalDate),
+  vendorAcknowledged: normalizeFieldValue(fieldData.VendorAcknowledged),
+  vendorAcknowledgedBy: pickFieldValue(fieldData, ['VendorAcknowledgedBy']),
+  vendorAcknowledgedOn: normalizeFieldValue(fieldData.VendorAcknowledgedOn),
+  orderPlacedOn: normalizeFieldValue(fieldData.VendorPortalSyncOn),
+  readyOn: pickFieldValue(fieldData, ['ItemPackedReadyToShip']),
 });
 
 const mapLineItemRecord = (fieldData: Record<string, unknown>): OrderLineItemRecord => ({
@@ -503,6 +525,360 @@ export const getVendorPOByNumber = async (vendorId: string, poNumber: string) =>
   }
 };
 
+/**
+ * Like getVendorPOByNumber, but also returns the FileMaker internal recordId so
+ * the record can be targeted for updates (the _find response carries recordId
+ * alongside fieldData, which the mapped record otherwise discards).
+ */
+export const getVendorPORecordByNumber = async (
+  vendorId: string,
+  poNumber: string
+): Promise<{ record: PurchaseOrderRecord; recordId: string } | null> => {
+  const payload = {
+    query: [
+      {
+        VendorID: `=="${vendorId}"`,
+        PONumber: `=="${poNumber}"`
+      }
+    ],
+    limit: 1
+  };
+
+  try {
+    const response = await fetchFM(FILEMAKER_LAYOUTS.purchaseOrders, 'POST', payload);
+    if (!response.data || response.data.length === 0) {
+      return null;
+    }
+
+    const entry = response.data[0] as { fieldData?: Record<string, unknown>; recordId?: string };
+    const fieldData: Record<string, unknown> = entry.fieldData ?? {};
+    const recordId = normalizeFieldValue(entry.recordId);
+
+    if (!recordId) {
+      return null;
+    }
+
+    return { record: mapPurchaseOrderRecord(fieldData), recordId };
+  } catch (error: unknown) {
+    if (getErrorMessage(error).includes('401')) return null;
+    throw error;
+  }
+};
+
+/**
+ * Update a single field on a purchase order record via the FileMaker Data API.
+ * Uses the /records/{recordId} endpoint (PATCH), which fetchFM does not cover
+ * since that helper is bound to the _find endpoint. Mirrors the 401 token
+ * refresh-and-retry behavior used elsewhere in this service.
+ */
+const patchPurchaseOrderRecord = async (
+  recordId: string,
+  fieldData: Record<string, string>
+): Promise<void> => {
+  let token = await getAuthToken();
+  const url = `${getBaseUrl()}/layouts/${encodeURIComponent(FILEMAKER_LAYOUTS.purchaseOrders)}/records/${encodeURIComponent(recordId)}`;
+
+  const doPatch = async (currentToken: string) =>
+    fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`,
+      },
+      body: JSON.stringify({ fieldData }),
+      cache: 'no-store',
+    });
+
+  let response = await doPatch(token);
+
+  if (response.status === 401) {
+    console.warn('FileMaker token expired, refreshing...');
+    token = await getAuthToken(true);
+    response = await doPatch(token);
+  }
+
+  const data = await response.json();
+
+  if (!response.ok || data.messages?.[0]?.code !== '0') {
+    throw new Error(`FileMaker API Error: ${response.status} - ${data.messages?.[0]?.message || 'Failed to update record'}`);
+  }
+};
+
+/**
+ * Resolve a display name for the commenting vendor from the vendors layout,
+ * combining PersonFirstName and PersonLastName. Falls back gracefully when
+ * either part is blank.
+ */
+export const getVendorCommentAuthorName = async (vendorId: string): Promise<string> => {
+  const payload = {
+    query: [
+      { ContactID: `=="${vendorId}"` }
+    ],
+    limit: 1
+  };
+
+  try {
+    const response = await fetchFM(FILEMAKER_LAYOUTS.vendors, 'POST', payload);
+    if (!response.data || response.data.length === 0) {
+      return '';
+    }
+
+    const fieldData: Record<string, unknown> = response.data[0].fieldData ?? {};
+    const firstName = pickFieldValue(fieldData, ['PersonFirstName']);
+    const lastName = pickFieldValue(fieldData, ['PersonLastName']);
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    return fullName || pickFieldValue(fieldData, ['PersonNameFull', 'ContactName']);
+  } catch (error: unknown) {
+    if (getErrorMessage(error).includes('401')) return '';
+    throw error;
+  }
+};
+
+/**
+ * Format a timestamp as M/D/YYYY h:mm:ss AM/PM to match the legacy portal's
+ * comment stamps (e.g. "6/19/2026 4:22:35 PM").
+ */
+const formatCommentTimestamp = (date: Date): string => {
+  const datePart = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  const rawHours = date.getHours();
+  const period = rawHours >= 12 ? 'PM' : 'AM';
+  const hours = rawHours % 12 || 12;
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  return `${datePart} ${hours}:${minutes}:${seconds} ${period}`;
+};
+
+/**
+ * Append a new vendor comment to the PO's VendorNotes field. The author name
+ * and timestamp are generated server-side (authoritative) and the entry is
+ * appended to the freshest existing value to preserve prior comments.
+ */
+export const appendVendorComment = async (
+  vendorId: string,
+  poNumber: string,
+  commentText: string
+): Promise<string> => {
+  const trimmedComment = normalizeFieldValue(commentText);
+  if (!trimmedComment) {
+    throw new Error('Comment text is required.');
+  }
+
+  const poRecord = await getVendorPORecordByNumber(vendorId, poNumber);
+  if (!poRecord) {
+    throw new Error('Order not found for this vendor.');
+  }
+
+  assertNotClosed(poRecord.record);
+
+  const authorName = (await getVendorCommentAuthorName(vendorId)) || 'Vendor';
+  const timestamp = formatCommentTimestamp(new Date());
+  const newEntry = `${trimmedComment}\n - ${authorName} ${timestamp}`;
+
+  const existingNotes = poRecord.record.vendorComments;
+  const updatedNotes = existingNotes ? `${existingNotes}\n${newEntry}` : newEntry;
+
+  await patchPurchaseOrderRecord(poRecord.recordId, { VendorNotes: updatedNotes });
+
+  return updatedNotes;
+};
+
+/**
+ * Convert an ISO date (YYYY-MM-DD, from an HTML date input) to FileMaker's
+ * M/D/YYYY format. Returns '' for empty input and passes through values that
+ * are not in the expected ISO shape.
+ */
+const toFileMakerDate = (isoDate: string): string => {
+  const value = normalizeFieldValue(isoDate);
+  if (!value) {
+    return '';
+  }
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return value;
+  }
+
+  const [, year, month, day] = match;
+  return `${Number(month)}/${Number(day)}/${year}`;
+};
+
+const isAcknowledged = (record: PurchaseOrderRecord): boolean => {
+  const value = record.vendorAcknowledged.trim().toLowerCase();
+  return value === '1' || value === 'yes' || value === 'true';
+};
+
+const assertAcknowledged = (record: PurchaseOrderRecord): void => {
+  if (!isAcknowledged(record)) {
+    throw new Error('Please acknowledge the order first.');
+  }
+};
+
+const isClosed = (record: PurchaseOrderRecord): boolean => {
+  const value = record.status.trim().toLowerCase();
+  return value === 'closed' || value === 'voided';
+};
+
+/**
+ * Returns true if the given PO is in a terminal (closed/voided) state and may
+ * no longer be modified. Used by routes outside the PO-write path (e.g. document
+ * upload/delete) to gate changes.
+ */
+export const isPurchaseOrderClosed = async (vendorId: string, poNumber: string): Promise<boolean> => {
+  const record = await getVendorPOByNumber(vendorId, poNumber);
+  return record ? isClosed(record) : false;
+};
+
+const assertNotClosed = (record: PurchaseOrderRecord): void => {
+  if (isClosed(record)) {
+    throw new Error('This order is closed and can no longer be modified.');
+  }
+};
+
+/**
+ * Load the PO record (with recordId), run a guard, patch the given fields, then
+ * return the freshly re-read record so callers reflect the persisted values.
+ */
+const updatePurchaseOrder = async (
+  vendorId: string,
+  poNumber: string,
+  fieldData: Record<string, string>,
+  guard?: (record: PurchaseOrderRecord) => void
+): Promise<PurchaseOrderRecord> => {
+  const found = await getVendorPORecordByNumber(vendorId, poNumber);
+  if (!found) {
+    throw new Error('Order not found for this vendor.');
+  }
+
+  assertNotClosed(found.record);
+
+  if (guard) {
+    guard(found.record);
+  }
+
+  await patchPurchaseOrderRecord(found.recordId, fieldData);
+
+  const refreshed = await getVendorPOByNumber(vendorId, poNumber);
+  if (!refreshed) {
+    throw new Error('Order not found for this vendor.');
+  }
+
+  return refreshed;
+};
+
+/**
+ * Acknowledge an order: requires an estimated arrival date, must not already be
+ * acknowledged. Sets the acknowledgement flag, author, timestamp, and the
+ * estimated arrival date.
+ */
+export const acknowledgeOrder = async (
+  vendorId: string,
+  poNumber: string,
+  estArrivalDateIso: string
+): Promise<PurchaseOrderRecord> => {
+  const estArrivalDate = toFileMakerDate(estArrivalDateIso);
+  if (!estArrivalDate) {
+    throw new Error('Estimated arrival date is required.');
+  }
+
+  const found = await getVendorPORecordByNumber(vendorId, poNumber);
+  if (!found) {
+    throw new Error('Order not found for this vendor.');
+  }
+
+  assertNotClosed(found.record);
+
+  if (isAcknowledged(found.record)) {
+    throw new Error('Order is already acknowledged.');
+  }
+
+  const authorName = (await getVendorCommentAuthorName(vendorId)) || 'Vendor';
+  const timestamp = formatCommentTimestamp(new Date());
+
+  await patchPurchaseOrderRecord(found.recordId, {
+    VendorAcknowledged: '1',
+    VendorAcknowledgedBy: authorName,
+    VendorAcknowledgedOn: timestamp,
+    EstArrivalDate: estArrivalDate,
+  });
+
+  const refreshed = await getVendorPOByNumber(vendorId, poNumber);
+  if (!refreshed) {
+    throw new Error('Order not found for this vendor.');
+  }
+
+  return refreshed;
+};
+
+/** Update the estimated arrival/delivery date (requires acknowledgement). */
+export const updateEstArrivalDate = async (
+  vendorId: string,
+  poNumber: string,
+  estArrivalDateIso: string
+): Promise<PurchaseOrderRecord> => {
+  const estArrivalDate = toFileMakerDate(estArrivalDateIso);
+  if (!estArrivalDate) {
+    throw new Error('Estimated delivery date is required.');
+  }
+
+  return updatePurchaseOrder(vendorId, poNumber, { EstArrivalDate: estArrivalDate }, assertAcknowledged);
+};
+
+/** Update the order shipped date and tracking number (requires acknowledgement). */
+export const updateOrderShipped = async (
+  vendorId: string,
+  poNumber: string,
+  shippedDateIso: string,
+  trackingNo: string
+): Promise<PurchaseOrderRecord> => {
+  const shippedDate = toFileMakerDate(shippedDateIso);
+  const tracking = normalizeFieldValue(trackingNo);
+
+  if (!shippedDate) {
+    throw new Error('Order shipped date is required.');
+  }
+
+  if (!tracking) {
+    throw new Error('Tracking number is required.');
+  }
+
+  return updatePurchaseOrder(
+    vendorId,
+    poNumber,
+    { OrderShippedDate: shippedDate, TrackingNo: tracking },
+    assertAcknowledged
+  );
+};
+
+/** Record the packed & ready date (requires acknowledgement). */
+export const markOrderReady = async (
+  vendorId: string,
+  poNumber: string,
+  readyDateIso: string
+): Promise<PurchaseOrderRecord> => {
+  const readyDate = toFileMakerDate(readyDateIso);
+  if (!readyDate) {
+    throw new Error('Packed & ready date is required.');
+  }
+
+  return updatePurchaseOrder(vendorId, poNumber, { 'ItemPackedReadyToShip': readyDate }, assertAcknowledged);
+};
+
+/** Persist the vendor invoice number (requires acknowledgement). */
+export const updateVendorInvoiceNo = async (
+  vendorId: string,
+  poNumber: string,
+  invoiceNo: string
+): Promise<PurchaseOrderRecord> => {
+  const invoice = normalizeFieldValue(invoiceNo);
+  if (!invoice) {
+    throw new Error('Invoice number is required.');
+  }
+
+  return updatePurchaseOrder(vendorId, poNumber, { VendorInvoiceNo: invoice }, assertAcknowledged);
+};
+
 export const getPurchaseOrderLineItems = async (poNumber: string) => {
   const payload = {
     query: [
@@ -524,6 +900,113 @@ export const getPurchaseOrderLineItems = async (poNumber: string) => {
     if (getErrorMessage(error).includes('401')) return [];
     throw error;
   }
+};
+
+export type OrderSpecSheetParameter = {
+  parameterName: string;
+  parameterValue: string;
+  minValue: string;
+  maxValue: string;
+  unit: string;
+  methodReference: string;
+};
+
+export type OrderSpecSheetItem = {
+  itemNo: string;
+  productName: string;
+  specSheetId: string;
+  specSheetName: string;
+  approved: boolean;
+  parameters: OrderSpecSheetParameter[];
+};
+
+const mapSpecSheetParameter = (fieldData: Record<string, unknown>): OrderSpecSheetParameter => ({
+  parameterName: pickFieldValue(fieldData, ['ParameterName']),
+  parameterValue: pickFieldValue(fieldData, ['ParameterValue']),
+  minValue: pickFieldValue(fieldData, ['MinValue']),
+  maxValue: pickFieldValue(fieldData, ['MaxValue']),
+  unit: pickFieldValue(fieldData, ['Unit']),
+  methodReference: pickFieldValue(fieldData, ['MethodReference']),
+});
+
+/**
+ * Step 2 of the spec-sheet fetch: given a Customer Standard ID, return its
+ * quality parameters (analytes) from Web_QPA, sorted by SortOrder.
+ */
+export const getQualityParameters = async (specSheetId: string): Promise<OrderSpecSheetParameter[]> => {
+  const id = normalizeFieldValue(specSheetId);
+  if (!id) {
+    return [];
+  }
+
+  const payload = {
+    query: [
+      {
+        ID_fk: `=="${id}"`,
+        Type: `=="CST"`,
+        COMMENT: `=="Comments"`,
+      },
+    ],
+    sort: [{ fieldName: 'SortOrder', sortOrder: 'ascend' }],
+  };
+
+  try {
+    const response = await fetchFM(FILEMAKER_LAYOUTS.qualityParameters, 'POST', payload);
+    if (!response.data) {
+      return [];
+    }
+
+    return response.data.map((record: { fieldData?: Record<string, unknown> }) =>
+      mapSpecSheetParameter(record.fieldData ?? {})
+    );
+  } catch (error: unknown) {
+    if (getErrorMessage(error).includes('401')) return [];
+    throw error;
+  }
+};
+
+/**
+ * Build the per-line-item specification sheet list for a PO.
+ * Step 1: read the line items from Web_MLI with the related Customer Standard
+ * (CSTD) fields. Step 2: for each item that has a spec sheet ID, fetch its
+ * quality parameters from Web_QPA.
+ */
+export const getOrderSpecSheets = async (poNumber: string): Promise<OrderSpecSheetItem[]> => {
+  const payload = {
+    query: [
+      { PONumber: `=="${poNumber}"` }
+    ]
+  };
+
+  let records: Array<{ fieldData?: Record<string, unknown> }> = [];
+
+  try {
+    const response = await fetchFM(FILEMAKER_LAYOUTS.lineItems, 'POST', payload);
+    records = response.data ?? [];
+  } catch (error: unknown) {
+    if (getErrorMessage(error).includes('401')) return [];
+    throw error;
+  }
+
+  const baseItems = records.map((record) => {
+    const fieldData = record.fieldData ?? {};
+    const approvedRaw = pickFieldValue(fieldData, ['MLI_CSTD__ContactId_ItemNo::Approved']);
+
+    return {
+      itemNo: pickFieldValue(fieldData, ['ItemNo']),
+      productName: pickFieldValue(fieldData, ['ProductName']),
+      specSheetId: pickFieldValue(fieldData, ['MLI_CSTD__ContactId_ItemNo::ID']),
+      specSheetName: pickFieldValue(fieldData, ['MLI_CSTD__ContactId_ItemNo::USSMID_Item']),
+      approved: approvedRaw === '1' || approvedRaw.toLowerCase() === 'yes' || approvedRaw.toLowerCase() === 'true',
+    };
+  });
+
+  return Promise.all(
+    baseItems.map(async (item) => ({
+      ...item,
+      parameters: item.specSheetId ? await getQualityParameters(item.specSheetId) : [],
+    }))
+  );
 };
 
 export const getPurchaseOrderDetails = async (vendorId: string, poNumber: string): Promise<PurchaseOrderDetails | null> => {
@@ -568,7 +1051,7 @@ export const getVendorSummaryByVendorId = async (vendorId: string): Promise<Vend
     ],
     limit: 1
   };
- 
+
   try {
     const response = await fetchFM(FILEMAKER_LAYOUTS.vendors, 'POST', payload);
     if (!response.data || response.data.length === 0) {

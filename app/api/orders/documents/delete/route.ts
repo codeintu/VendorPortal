@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { deleteOrderDocument } from "@/services/orderDocumentDeleteService"
+import { isPurchaseOrderClosed } from "@/services/filemakerService"
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +17,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Vendor ID, PO number, and file ID are required" },
         { status: 400 }
+      )
+    }
+
+    if (await isPurchaseOrderClosed(vendorId, poNumber)) {
+      return NextResponse.json(
+        { error: "This order is closed and can no longer be modified." },
+        { status: 409 }
       )
     }
 

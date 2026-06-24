@@ -81,6 +81,45 @@ body :not(input):not(textarea):not([contenteditable="true"]) {
   caret-color: transparent;
 }
 
+/* caret-color is inherited, so editable elements would otherwise pick up the
+   transparent caret above. Restore a visible, theme-aware caret for them. */
+input,
+textarea,
+[contenteditable="true"] {
+  caret-color: var(--foreground);
+}
+
+/* Disabled/read-only fields are not editable, so they must not show a caret. */
+input:disabled,
+textarea:disabled,
+input[readonly],
+textarea[readonly] {
+  caret-color: transparent;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

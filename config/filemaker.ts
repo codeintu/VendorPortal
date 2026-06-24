@@ -9,5 +9,6 @@ export const FILEMAKER_LAYOUTS = {
   vendors: "Web_Contacts",
   purchaseOrders: "Web_PO",
   lineItems: "Web_MLI",
+  qualityParameters: "Web_QPA",
   documents: "",
 };

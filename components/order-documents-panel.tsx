@@ -49,6 +49,7 @@ type OrderDocumentsApiResponse = {
 type OrderDocumentsPanelProps = {
   vendorId: string | null
   poNumber: string
+  disabled?: boolean
 }
 
 function createEmptySlot(type: string): DocumentSlot {
@@ -135,7 +136,7 @@ function getStatusBadgeClasses(status: DocumentStatus) {
   }
 }
 
-export function OrderDocumentsPanel({ vendorId, poNumber }: OrderDocumentsPanelProps) {
+export function OrderDocumentsPanel({ vendorId, poNumber, disabled = false }: OrderDocumentsPanelProps) {
   const [slots, setSlots] = useState<DocumentSlot[]>(
     DEFAULT_DOCUMENT_TYPES.map((type) => createEmptySlot(type))
   )
@@ -245,8 +246,8 @@ export function OrderDocumentsPanel({ vendorId, poNumber }: OrderDocumentsPanelP
   const selectedStatus = selectedSlot?.status ?? "Not uploaded"
   const showRemotePreview = Boolean(selectedPreview && selectedSlot?.fileId)
   const hasPoDriveFolder = Boolean(folders?.poFolderId && folders?.docsFolderId)
-  const uploadDisabled = !selectedSlot || selectedSlot.locked || uploading || documentsLoading || !hasPoDriveFolder
-  const deleteDisabled = !selectedSlot?.fileId || selectedSlot.locked || deleting || documentsLoading
+  const uploadDisabled = disabled || !selectedSlot || selectedSlot.locked || uploading || documentsLoading || !hasPoDriveFolder
+  const deleteDisabled = disabled || !selectedSlot?.fileId || selectedSlot.locked || deleting || documentsLoading
 
   const openFilePicker = () => {
     if (uploadDisabled) {
@@ -356,35 +357,20 @@ export function OrderDocumentsPanel({ vendorId, poNumber }: OrderDocumentsPanelP
   }
 
   return (
-    <section className="overflow-hidden rounded-[24px] border border-border/70 bg-card shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
-      <div className="border-b border-border/70 px-5 py-5 md:px-7">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="h-8 w-1 rounded-full bg-primary" />
-              <div>
-                <h2 className="text-[18px] font-semibold tracking-tight text-foreground">
-                  Manage order documents
-                </h2>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-              {uploadedCount} Uploaded
-            </span>
-            <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:border-emerald-500/60 dark:bg-transparent dark:text-emerald-300">
-              {approvedCount} Approved
-            </span>
-          </div>
-        </div>
-        {documentsError ? (
-          <p className="mt-3 text-sm text-destructive">{documentsError}</p>
-        ) : null}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+          {uploadedCount} Uploaded
+        </span>
+        <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:border-emerald-500/60 dark:bg-transparent dark:text-emerald-300">
+          {approvedCount} Approved
+        </span>
       </div>
+      {documentsError ? (
+        <p className="text-sm text-destructive">{documentsError}</p>
+      ) : null}
 
-      <div className="grid items-stretch gap-6 px-5 py-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-7">
+      <div className="grid items-stretch gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="flex flex-col overflow-hidden rounded-[20px] border border-border/70 bg-muted/40">
           <div className="border-b border-border/70 px-4 py-4">
             <p className="text-sm font-semibold text-foreground">Document Types</p>
@@ -536,6 +522,6 @@ export function OrderDocumentsPanel({ vendorId, poNumber }: OrderDocumentsPanelP
         </main>
       </div>
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
-    </section>
+    </div>
   )
 }
