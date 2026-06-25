@@ -9,7 +9,8 @@ type TabKey = "import" | "coa" | "spec"
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "import", label: "Import Documents" },
-  { key: "coa", label: "COA (Certificate of Analysis)" },
+  // COA tab temporarily hidden (not functional yet). Re-enable by uncommenting.
+  // { key: "coa", label: "COA (Certificate of Analysis)" },
   { key: "spec", label: "Specification Sheets" },
 ]
 
